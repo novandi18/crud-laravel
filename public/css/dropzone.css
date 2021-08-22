@@ -1,0 +1,32 @@
+.dropzone {
+    background: #F8FAFD;
+    border-radius: 5px;
+    max-width: 100%;
+    border: 2px dashed #e4e4e4;
+}
+
+.dz-message {
+    display: flex;
+    flex-direction: column;
+    color: #838383;
+}
+
+.dz-message i {
+    font-size: 5em;
+    margin-top: -0.4em;
+}
+
+.dz-preview {
+    background-color: #0D6EFD;
+    z-index: 100;
+    border-radius: 10px;
+}
+
+.dz-filename {
+    border-radius: 5px;
+}
+
+.dz-max-files-reached {
+    pointer-events: none;
+    cursor: default;
+}

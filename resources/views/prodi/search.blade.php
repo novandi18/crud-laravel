@@ -3,8 +3,15 @@
 @section('container')
 
 <div class="py-4 d-flex justify-content-between align-items-center">
-    <h2>Hasil Pencarian dari : {{ $search }}</h2>
-    <a href="/prodi" class="btn btn-primary">Lihat semua data</a>
+    <div class="d-flex flex-column">
+        <span class="border-bottom pb-2 mb-1" style="font-size: .8em">Hasil Pencarian dari :</span>
+        <h2>{{ $search }}</h2>
+    </div>
+    <div class="d-flex flex-column">
+        <div class="w-100 pb-2 mb-1" style="font-size: .8em">Ditemukan {{ $result->count() }} data
+            ({{ $log }} detik)</div>
+        <a href="/prodi" class="btn btn-primary">Lihat semua data</a>
+    </div>
 </div>
 
 <form action="/prodi/search" method="GET" role="search">
@@ -16,6 +23,7 @@
     </div>
 </form>
 
+@if ($result->count())
 <table class="table table-hover table-bordered shadow-sm">
     <thead class="text-center flex-column">
         <tr>
@@ -30,8 +38,8 @@
         @foreach ($result as $data)
         <tr>
             <th>{{ $no++ }}</th>
-            <th>{{ $data->nama_prodi }}</th>
-            <th>{{ $data->jml_mhs }}</th>
+            <td>{{ $data->nama_prodi }}</td>
+            <td>{{ ($data->jml_mhs) ? $data->jml_mhs.' Orang' : 'Tidak ada' }}</td>
             <td>
                 <a href="/prodi/update/{{ Crypt::encrypt($data->id_prodi) }}" class="btn btn-success"><i
                         class="bi bi-pencil-fill"></i></a>
@@ -42,6 +50,9 @@
         @endforeach
     </tbody>
 </table>
+@else
+<h3>Data tidak ditemukan.</h3>
+@endif
 
 <!-- Delete Confirm -->
 @foreach ($result as $data)

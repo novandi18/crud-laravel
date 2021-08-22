@@ -17,7 +17,7 @@ class ProdiModel extends Model
 
     // READ ALL DATA
     public function allData() {
-        return DB::table('tb_prodi')->get();
+        return DB::table('tb_prodi')->paginate(5);
     }
 
     // UPDATE JUMLAH MAHASISWA PADA PRODI YANG TELAH DIDAFTARKAN KE DATA MAHASISWA
@@ -46,6 +46,12 @@ class ProdiModel extends Model
         DB::table('tb_prodi')->where('id_prodi', Crypt::decrypt($id_prodi))->delete();
     }
 
+    // DELETE ALL DATA
+    public function deleteAllProdi() {
+        DB::table('tb_mahasiswa')->delete();
+        DB::table('tb_prodi')->delete();
+    }
+
     // UPDATE DATA
     public function updateProdi($prodi, $id_prodi) {
         $getProdi = DB::table('tb_prodi')->where('id_prodi', Crypt::decrypt($id_prodi))->value('nama_prodi');
@@ -60,5 +66,15 @@ class ProdiModel extends Model
             ->update([
                 'nama_prodi' => $prodi['nama_prodi']
             ]);
+    }
+
+    // COUNT ALL DATA PRODI
+    public function countAll() {
+        return DB::table('tb_prodi')->count();
+    }
+
+    // ADD DATA WHERE 'PRODI' IN 'MAHASISWA'
+    public function addDataFromMahasiswa($prodi) {
+        return DB::table('tb_prodi')->insert($prodi);
     }
 }

@@ -6,6 +6,8 @@
     <h2>Data Prodi</h2>
     <div class="d-flex">
         @if ($nodata == false)
+        <button class="btn btn-danger" style="margin-right: .5em" data-bs-toggle="modal"
+            data-bs-target="#deleteAllProdi"><i class="bi bi-trash"></i> Hapus semua</button>
         <a href="{{ route('export_prodi') }}" class="btn btn-light border-dark" style="margin-right: .5em"><i
                 class="bi bi-download"></i> Export Excel</a>
         @else
@@ -23,7 +25,7 @@
         <input type="search" value="{{ old('search') }}"
             class="form-control rounded-0 @error('search') is-invalid @enderror" name="search"
             placeholder="Cari prodi berdasarkan nama atau jumlah mahasiswa...">
-        <button class="btn btn-dark rounded-0" type="submit">Cari</button>
+        <button class="btn btn-dark rounded-0" type="submit" style="z-index: 0">Cari</button>
     </div>
 </form>
 
@@ -45,24 +47,48 @@
         </tr>
     </thead>
     <tbody class="text-center">
-        @php
-        $no = 1;
-        @endphp
-        @foreach ($prodi as $data)
+        @foreach ($prodi as $data => $d)
         <tr>
-            <th>{{ $no++ }}</th>
-            <td>{{ $data->nama_prodi }}</td>
-            <td>{{ $data->jml_mhs }} Orang</td>
+            <th>{{ $prodi->firstItem() + $data }}</th>
+            <td>{{ $d->nama_prodi }}</td>
+            <td>{{ ($d->jml_mhs) ? $d->jml_mhs.' Orang' : 'Tidak ada' }}</td>
             <td>
-                <a href="/prodi/update/{{ Crypt::encrypt($data->id_prodi) }}" class="btn btn-success"><i
+                <a href="/prodi/update/{{ Crypt::encrypt($d->id_prodi) }}" class="btn btn-success"><i
                         class="bi bi-pencil-fill"></i></a>
-                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete{{ $data->id_prodi }}"><i
+                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete{{ $d->id_prodi }}"><i
                         class="bi bi-trash-fill"></i></button>
             </td>
         </tr>
         @endforeach
     </tbody>
 </table>
+
+{{ $prodi->links() }}
+
+<!-- Delete All Data Confirm -->
+<div class="modal fade" id="deleteAllProdi" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yakin ingin menghapus semua data prodi?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <div class="d-flex">
+                        <i class="bi bi-exclamation-circle" style="font-size: 2em; margin-right: 10px"></i>
+                        <span>Menghapus semua prodi akan menghapus semua data mahasiswa.</span>
+                    </div>
+                </div>
+                <span>Data yang telah dihapus tidak dapat dikembalikan.</span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <a href="{{ route('delete_prodi') }}" class="btn btn-danger">Hapus semua</a>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Delete Confirm -->
 @foreach ($prodi as $data)
