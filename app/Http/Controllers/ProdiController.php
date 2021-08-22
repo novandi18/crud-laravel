@@ -62,7 +62,9 @@ class ProdiController extends Controller
 
         $prodi = [
             'nama_prodi' => Request()->nama_prodi,
-            'jml_mhs' => 0
+            'jml_mhs' => 0,
+            'updated_at' => \Carbon\Carbon::now(),
+            'created_at' => \Carbon\Carbon::now()
         ];
 
         $this->ProdiModel->addProdi($prodi);
@@ -73,6 +75,12 @@ class ProdiController extends Controller
     public function delete($id_prodi) {
         $this->ProdiModel->deleteProdi($id_prodi);
         return redirect()->route('prodi')->with('pesan', 'Data berhasil dihapus');
+    }
+    
+    // DELETE ALL DATA
+    public function deleteAll() {
+        $this->ProdiModel->deleteAllProdi();
+        return redirect()->route('prodi')->with('pesan', 'Data prodi dan mahasiswa berhasil dihapus semua');
     }
 
     // UPDATE DATA
@@ -107,16 +115,20 @@ class ProdiController extends Controller
         Request()->validate([
             'search' => 'required'
         ]);
-
+        
+        DB::enableQueryLog();
         $result = DB::table('tb_prodi')
             ->where('nama_prodi', 'LIKE', "%".Request()->search."%")
             ->orWhere('jml_mhs', 'LIKE', "%".Request()->search."%")
             ->get();
 
+        $queries = DB::getQueryLog();
+
         $data = [
             'search' => Request()->search,
             'result' => $result,
-            'title' => 'Hasil Pencarian'
+            'title' => 'Hasil Pencarian Data Prodi',
+            'log' => $queries[0]["time"]
         ];
 
         return view('prodi.search', $data);
@@ -133,9 +145,10 @@ class ProdiController extends Controller
 
     public function importProcess(Request $request) {
         $request->validate([
-            'excel' => 'required'
+            'excel' => 'required|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
         ], [
-            'excel.required' => 'File harus diupload'
+            'excel.required' => 'File harus diupload',
+            'excel.mimes' => 'Tipe file harus excel!'
         ]);
 
         Excel::import(new ProdiImport, $request->file('excel'));

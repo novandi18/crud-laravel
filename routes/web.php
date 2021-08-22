@@ -6,6 +6,12 @@ use App\Http\Controllers\MahasiswaController;
 use App\Http\Controllers\ProdiController;
 use App\Http\Controllers\ProfilController;
 use Illuminate\Support\Facades\Auth;
+use App\Events\Message;
+use App\Http\Controllers\ChatController;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 
 /*
 |--------------------------------------------------------------------------
@@ -131,6 +137,11 @@ Route::group(['middleware' => 'auth'], function() {
         ProdiController::class, 'delete'
     ]);
     
+    // DELETE ALL Prodi
+    Route::get('/prodi/deleteall', [
+        ProdiController::class, 'deleteAll'
+    ])->name("delete_prodi");
+    
     // UPDATE Prodi
     Route::get('/prodi/update/{id_prodi}', [
         ProdiController::class, 'update'
@@ -242,5 +253,92 @@ Route::group(['middleware' => 'auth'], function() {
     Route::get('/mahasiswa/export', [
         MahasiswaController::class, 'export'
     ])->name('export_mahasiswa');
-});
 
+    // HAPUS SEMUA DATA MAHASISWA
+    Route::get('/mahasiswa/deleteall', [
+        MahasiswaController::class, 'deleteAll'
+    ])->name('delete_mahasiswa');
+
+    // LIVE CHAT ADMIN
+    Route::post('/message', function (Request $request) {
+        event(
+            new Message($request->username, $request->receiver, $request->message)
+        );
+
+        $d = [
+            'from_name' => Crypt::encrypt($request->name),
+            'to_name' => Crypt::encrypt($request->to_name),
+            'from_username' => Crypt::encrypt($request->username),
+            'sender' => Crypt::encrypt($request->username),
+            'receiver' => Crypt::encrypt($request->receiver),
+            'message' => Crypt::encrypt($request->message),
+            'has_read' => 0,
+            'sent_at' => \Carbon\Carbon::now()->format('H:i'),
+            'chat_date' => \Carbon\Carbon::now()->isoFormat('D MMMM Y')
+        ];
+
+        DB::table('chat_history')->insert($d);
+    });
+    
+    // CEK APAKAH ADMIN LEBIH DARI 1
+    Route::get('/get_all_admin', function() {
+        $data = DB::table('users')->select('name', 'username', 'image')->where('username', '!=', Auth::user()->username)->get();
+        $count = DB::table('users')->count();
+        if($count < 2) {
+            return response()->json($count);
+        }
+
+        return response()->json($data);
+    });
+
+    // DAPATKAN SEMUA CHAT
+    Route::get('/get_all_chat', function() {
+        $data = DB::table('chat_history')->get();
+        if(DB::table('chat_history')->count() < 1) {
+            $count = ['count' => 0];
+            return response()->json($count);
+        }
+    
+        foreach ($data as $i) {
+            $toArray[] = (array) $i;
+        }
+
+        foreach ($toArray as $h) {
+            $dataChat[] = [
+                'from_name' => Crypt::decrypt($h['from_name']),
+                'to_name' => Crypt::decrypt($h['to_name']),
+                'sender' => Crypt::decrypt($h['sender']),
+                'receiver' => Crypt::decrypt($h['receiver']),
+                'message' => Crypt::decrypt($h['message']),
+                'has_read' => $h['has_read'],
+                'sent_at' => $h['sent_at'],
+                'chat_date' => $h['chat_date'],
+                'login_name' => Auth::user()->name,
+                'login_username' => Auth::user()->username
+            ];
+        }
+        
+        return response()->json($dataChat);
+    });
+
+    Route::post('/get_chat_history', function(Request $request) {
+        $query = DB::table('chat_history')->get();
+
+        foreach ($query as $q) {
+            $toArray[] = (array) $q;
+        }
+
+        foreach ($toArray as $h) {
+            $data_chat[] = [
+                'sender' => Crypt::decrypt($h['sender']),
+                'receiver' => Crypt::decrypt($h['receiver']),
+                'message' => Crypt::decrypt($h['message']),
+                'sent_at' => $h['sent_at'],
+                'chat_date' => $h['chat_date'],
+                'username_log' => Auth::user()->username
+            ];
+        }
+
+        return response()->json($data_chat);
+    });
+});

@@ -3,8 +3,15 @@
 @section('container')
 
 <div class="py-4 d-flex justify-content-between align-items-center">
-    <h2>Hasil Pencarian dari : {{ $search }}</h2>
-    <a href="/" class="btn btn-primary">Lihat semua data</a>
+    <div class="d-flex flex-column">
+        <span class="border-bottom pb-2 mb-1" style="font-size: .8em">Hasil Pencarian dari :</span>
+        <h2>{{ $search }}</h2>
+    </div>
+    <div class="d-flex flex-column">
+        <div class="w-100 pb-2 mb-1" style="font-size: .8em">Ditemukan {{ $result->count() }} data
+            ({{ $log }} detik)</div>
+        <a href="/" class="btn btn-primary">Lihat semua data</a>
+    </div>
 </div>
 
 <form action="/mahasiswa/search" method="GET" role="search">
@@ -14,14 +21,14 @@
             name="search" placeholder="Cari nama atau NIM mahasiswa...">
         <div class="d-flex position-relative">
             <select class="form-select rounded-0" name="kelas">
-                <option value="" name="kelas">Pilih Kelas</option>
+                <option value="" name="kelas">Semua Kelas</option>
                 @foreach ($kelas as $k)
                 <option name="kelas" value="{{ $k->kelas_mhs }}" {{ ($kelas_s == $k->kelas_mhs) ? 'selected' : '' }}>
                     {{ $k->kelas_mhs }}</option>
                 @endforeach
             </select>
             <select class="form-select rounded-0" name="prodi">
-                <option name="prodi" value="">Pilih Prodi</option>
+                <option name="prodi" value="">Semua Prodi</option>
                 @foreach ($prodi as $p)
                 <option name="prodi" value="{{ $p->nama_prodi }}" {{ ($prodi_s == $p->nama_prodi) ? 'selected' : '' }}>
                     {{ $p->nama_prodi }}</option>
@@ -33,6 +40,7 @@
     </div>
 </form>
 
+@if ($result->count())
 <table class="table table-hover table-bordered shadow-sm">
     <thead class="text-center flex-column">
         <tr>
@@ -63,6 +71,9 @@
         @endforeach
     </tbody>
 </table>
+@else
+<h3>Data tidak ditemukan.</h3>
+@endif
 
 <!-- Delete Confirm -->
 @foreach ($result as $data)

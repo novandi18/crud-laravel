@@ -20,7 +20,7 @@ class MahasiswaModel extends Model
 
     // READ ALL DATA
     public function allData() {
-        return DB::table('tb_mahasiswa')->get();
+        return DB::table('tb_mahasiswa')->paginate(5);
     }
 
     // READ DATA BY ID
@@ -53,7 +53,18 @@ class MahasiswaModel extends Model
             ->update([
                 'nama_mhs' => $data['nama_mhs'],
                 'kelas_mhs' => $data['kelas_mhs'],
-                'prodi_mhs' => $data['prodi_mhs']
+                'prodi_mhs' => $data['prodi_mhs'],
+                'updated_at' => \Carbon\Carbon::now(),
+                'created_at' => \Carbon\Carbon::now()
             ]);
+    }
+
+    // DELETE ALL DATA
+    public function deleteAllData() {
+        return DB::table('tb_mahasiswa')->delete();
+    }
+
+    public function selectUniqueProdi() {
+        return DB::table('tb_mahasiswa')->select('prodi_mhs')->distinct()->get();
     }
 }

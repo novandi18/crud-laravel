@@ -12,6 +12,16 @@
     enctype="multipart/form-data">
     @csrf
     <div class="mb-3">
+        <label for="nim" class="form-label">NIM</label>
+        <input type="number" name="nim" value="{{ $mhs->nim }}" class="form-control @error('nim') is-invalid @enderror"
+            id="nim">
+        <div class="invalid-feedback">
+            @error('nim')
+            {{ $message }}
+            @enderror
+        </div>
+    </div>
+    <div class="mb-3">
         <label for="nama" class="form-label">Nama</label>
         <input type="text" name="nama_mhs" value="{{ $mhs->nama_mhs }}"
             class="form-control @error('nama_mhs') is-invalid @enderror" id="nama">

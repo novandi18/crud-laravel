@@ -20,7 +20,6 @@
             @enderror
         </div>
     </div>
-
     <button type="submit" class="btn btn-primary mb-5">Submit</button>
 </form>
 

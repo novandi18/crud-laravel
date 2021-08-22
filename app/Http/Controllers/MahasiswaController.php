@@ -12,6 +12,8 @@ use App\Imports\MahasiswaImport;
 use App\Exports\MahasiswaExport;
 use Illuminate\Support\Facades\Auth;
 
+use function PHPUnit\Framework\matches;
+
 class MahasiswaController extends Controller
 {
     public function __construct() {
@@ -79,7 +81,9 @@ class MahasiswaController extends Controller
             'nim' => Request()->nim,
             'nama_mhs' => Request()->nama_mhs,
             'kelas_mhs' => Request()->kelas_mhs,
-            'prodi_mhs' => Request()->prodi_mhs
+            'prodi_mhs' => Request()->prodi_mhs,
+            'updated_at' => \Carbon\Carbon::now(),
+            'created_at' => \Carbon\Carbon::now()
         ];
 
         $prodi = [
@@ -111,16 +115,29 @@ class MahasiswaController extends Controller
 
     public function updateProcess($id_mhs) {
         Request()->validate([
-            'nama_mhs'  => 'required|max:256',
+            'nim' => [
+                'required',
+                'max:11',
+                function($attr, $val, $fail) {
+                    if($val < 0) {
+                        $fail('NIM harus bernilai positif');
+                    }
+                }
+            ],
+            'nama_mhs' => 'required|max:256|regex:/0-9/',
             'kelas_mhs' => 'required|max:3',
         ], [
+            'nim.required' => 'NIM mahasiswa harus diisi.',
+            'nim.max' => 'NIM mahasiswa maksimal 11 angka.',
             'nama_mhs.required' => 'Nama mahasiswa harus diisi.',
             'nama_mhs.max'      => 'Nama mahasiswa terlalu panjang',
+            'nama_mhs.regex'      => 'Nama mahasiswa harus berupa huruf',
             'kelas_mhs.required' => 'Kelas mahasiswa harus diisi.',
             'kelas_mhs.max'      => 'Kelas mahasiswa tidak diizinkan lebih dari 3 karakter'
         ]);
 
         $mhs = [
+            'nim' => Request()->nim,
             'nama_mhs' => Request()->nama_mhs,
             'kelas_mhs' => Request()->kelas_mhs,
             'prodi_mhs' => Request()->prodi_mhs
@@ -136,13 +153,41 @@ class MahasiswaController extends Controller
             'search' => 'required'
         ]);
 
-        $result = DB::table('tb_mahasiswa')
-            ->where('nama_mhs', 'LIKE', "%".Request()->search."%")
-            ->where('kelas_mhs', 'like', "%".Request()->kelas."%")
-            ->where('prodi_mhs', 'like', "%".Request()->prodi."%")
-            ->orWhere('nim', 'LIKE', "%".Request()->search."%")
-            ->get();
+        DB::enableQueryLog();
+        if(Request()->kelas != '' && Request()->prodi != '') {
+            $result = DB::table('tb_mahasiswa')
+                        ->where(function($check) {
+                            $check->where('nim', 'LIKE', '%'.Request()->search.'%')
+                                ->orWhere('nama_mhs', 'LIKE', '%'.Request()->search.'%');
+                        })
+                        ->where('kelas_mhs', '=', Request()->kelas)
+                        ->where('prodi_mhs', '=', Request()->prodi)
+                        ->get();
+        } else if(Request()->kelas != '' && Request()->prodi == '') {
+            $result = DB::table('tb_mahasiswa')
+                        ->where(function($check) {
+                            $check->where('nim', 'LIKE', '%'.Request()->search.'%')
+                                ->orWhere('nama_mhs', 'LIKE', '%'.Request()->search.'%');
+                        })
+                        ->where('kelas_mhs', '=', Request()->kelas)
+                        ->get();
+        } else if(Request()->kelas == '' && Request()->prodi != '') {
+            $result = DB::table('tb_mahasiswa')
+                        ->where(function($check) {
+                            $check->where('nim', 'LIKE', '%'.Request()->search.'%')
+                                ->orWhere('nama_mhs', 'LIKE', '%'.Request()->search.'%');
+                        })
+                        ->where('prodi_mhs', '=', Request()->prodi)
+                        ->get();
+                        
+        } else {
+            $result = DB::table('tb_mahasiswa')
+                        ->where('nim', 'LIKE', '%'.Request()->search.'%')
+                        ->orWhere('nama_mhs', 'LIKE', '%'.Request()->search.'%')
+                        ->get();
+        }
 
+        $queries = DB::getQueryLog();
         $mhs = $this->MahasiswaModel->allData();
         $mhsUnique = $mhs->unique('kelas_mhs');
 
@@ -153,7 +198,8 @@ class MahasiswaController extends Controller
             'kelas' => $mhsUnique->values()->all(),
             'prodi' => $this->ProdiModel->allData(),
             'result' => $result,
-            'title' => 'Hasil Pencarian'
+            'title' => 'Hasil Pencarian Data Mahasiswa',
+            'log' => $queries[0]["time"]
         ];
 
         return view('mahasiswa.search', $data);
@@ -182,17 +228,49 @@ class MahasiswaController extends Controller
 
     public function importProcess(Request $request) {
         $request->validate([
-            'excel' => 'required'
+            'excel' => 'required|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
         ], [
-            'excel.required' => 'File harus diupload'
+            'excel.required' => 'File harus diupload',
+            'excel.mimes' => 'Tipe file harus excel!',
         ]);
 
         Excel::import(new MahasiswaImport, $request->file('excel'));
+        $countProdi = $this->ProdiModel->countAll();
+        if($countProdi < 1) {
+            $prodiUnique = $this->MahasiswaModel->selectUniqueProdi();
+            foreach ($prodiUnique as $v) {
+                $prodi[] = [
+                    'nama_prodi' => $v->prodi_mhs,
+                    'jml_mhs' => 0,
+                    'updated_at' => \Carbon\Carbon::now(),
+                    'created_at' => \Carbon\Carbon::now(),
+                ];
+            }
+            $this->ProdiModel->addDataFromMahasiswa($prodi);
+            $prodi = $this->ProdiModel->allData();
+            foreach ($prodi as $p) {
+                $x = DB::table('tb_mahasiswa')->where('prodi_mhs', $p->nama_prodi)->count();
+                if($p->jml_mhs != $x) {
+                    $this->ProdiModel->updateJumlahlMahasiswa(['count' => $x, 'prodi' => $p->nama_prodi]);
+                }
+            }
+            return redirect()->route('mahasiswa')->with('pesan', 'Import data mahasiswa berhasil');
+        }
         return redirect()->route('mahasiswa')->with('pesan', 'Import data mahasiswa berhasil');
     }
 
     // EXPORT DATA
     public function export() {
         return Excel::download(new MahasiswaExport, 'data_mahasiswa_'.date('dmY').'.xlsx');
+    }
+
+    // HAPUS SEMUA DATA
+    public function deleteAll(Request $request) {
+        if($request->deleteProdi) {
+            $this->ProdiModel->deleteAllProdi();
+        }
+
+        $this->MahasiswaModel->deleteAllData();
+        return redirect()->route('mahasiswa')->with('pesan', 'Berhasil menghapus semua data mahasiswa');
     }
 }
